@@ -1,3 +1,7 @@
+----------------------------IMPORTS----------------------------
+
+--local mp = require('mp')
+
 ----------------------------DEALING WITH SETTINGS----------------------------
 local settings = {
 	folder = "test",
@@ -6,6 +10,7 @@ local settings = {
 
 -- to remove later
 local test_str = "Gochuumon_wa_Usagi_Desu_ka_S01 EP08 (08m14s597ms)"
+local test_filename = "【VCC二次会】一度も伝わることのないお絵描き伝言ゲームｗｗｗ【切り抜き だるまいずごっど 葛葉 じゃすぱー わいわい 井口理 ⧸Gartic Phone】 [H15-PkzDOJ8].mp4"
 
 local conf_name = "screenshot.conf"
 
@@ -60,14 +65,49 @@ local function load_opts()
 	save_opts()
 end
 
+----------------------------HELPER FUNCTIONS----------------------------
+local function remove_extension(file_name)
+	return file_name:gsub("%.%w+$", "")
+end
+
+local function remove_text_in_parentheses(str)
+	return str:gsub("%b()", ""):gsub("（.-）", "")
+end
+
+local function remove_text_in_brackets(str)
+    return str:gsub('%b[]', ''):gsub('【.-】', '')
+end
+
+local function remove_special_characters(str)
+    return str:gsub('[%c%p%s]', ''):gsub('　', '')
+end
+
 ----------------------------CORE FUNCTIONALITY----------------------------
 
 local function regex_test(str)
 	return str:match("^(.-)_S?(%d*)%s*EP(%d*)%s*%((%w*)%)$")
 end
 
+local function get_file_info()
+	local file_name = mp.get_property("filename")
+--	mp.msg.error(file_name)
+
+	local operations = {
+		remove_extension,
+		remove_text_in_parentheses, 
+		remove_text_in_brackets, 
+		remove_special_characters
+	}
+	for _, funct in ipairs(operations) do
+		file_name = funct(file_name) or nil
+	end
+	
+	return file_name
+end
+
 mp.add_key_binding("Ctrl+f", "testing", function()
 	mp.msg.error(conf_path())
---	mp.msg.error(regex_test(test_str))
+	mp.msg.error(get_file_info())
 	load_opts()
 end)
+
