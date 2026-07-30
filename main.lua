@@ -41,9 +41,24 @@ local function save_opts()
 	mp.osd_message(("did stuff in %s"):format(conf_path()))
 end
 
---local function load_opts()
-
--- end
+local function load_opts()
+	local f = io.open(conf_path(), "r")
+	if not f then 
+		-- create it or smth
+	end
+	
+	for line in f:lines() do
+		local k, v = line:match("^%s*([%w_]+)%s*=%s*(%S+)")
+		if k and v then
+			settings[k] = tonumber(v) or v
+			mp.msg.error(("loaded %s: %s"):format(k, v))
+		end
+	end	
+	f:close()
+	
+	mp.msg.error("load complete")
+	save_opts()
+end
 
 ----------------------------CORE FUNCTIONALITY----------------------------
 
@@ -54,5 +69,5 @@ end
 mp.add_key_binding("Ctrl+f", "testing", function()
 	mp.msg.error(conf_path())
 --	mp.msg.error(regex_test(test_str))
-	save_opts()
+	load_opts()
 end)
