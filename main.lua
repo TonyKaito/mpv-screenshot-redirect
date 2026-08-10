@@ -109,10 +109,38 @@ local function folder_exists(file_path)
 	return false
 end
 
+local function debug_table(poggers)
+	for k, v in pairs(poggers) do
+		if type(v) == "table" then
+			mp.msg.error("Key: " .. k)
+			debug_table(v)
+		else
+			mp.msg.error("Key: " .. k .. " Value: " .. v)
+		end
+	end
+end
+
 ----------------------------CORE FUNCTIONALITY----------------------------
 
-local function regex_test(str)
-	return str:match("^(.-)_S?(%d*)%s*EP(%d*)%s*%((%w*)%)$")
+local function parse_cmt(str)
+	if str == nil then
+		return ""
+	end
+	return str:match("(.-)%s*EP(%d*)%s*%((%w*)%)")
+end
+
+local function parse_sound(str)
+	if not str then
+		return ""
+	end
+	return str:match(".*_(%d*m%d*s%d*ms)[_-](%d*m%d*s%d*ms)%..*")
+end
+
+local function parse_img(str)
+	if not str then
+		return ""
+	end
+	return str:match(".*_(%d*m%d*s%d*ms)[_-](%d*m%d*s%d*ms)%..*")
 end
 
 local function get_file_info()
@@ -132,30 +160,110 @@ local function get_file_info()
 	return file_name
 end
 
-----------------------------ANKI INTERFACING----------------------------
-local function generate_random_temp()
-	return utils.join_path(get_temp_folder(), string.format('screenshot_curlreq_%d.txt', math.random(10^9)))
-end
 
-local function generate_unique_temp()
-	local file_path = generate_random_temp()
-	while folder_exists(file_path) do
-		file_path = generate_random_temp()
+local function extract_fields_info(card_details)
+	local extracted_info = {}
+	for _, info in ipairs(card_details) do
+		local id, sound, img, cmt = table.unpack(info)
+		if (sound == nil) then goto continue end
+		sound = sound:gsub("\r", "")
+		local start_ts, end_ts = parse_sound(sound)
+		
+		if (img == nil) then goto continue end
+		img = img:gsub("\r", "")
+		local start_backup, end_backup = parse_img(img)
+		
+		if start_backup and not start_ts then start_ts = start_backup end
+		if end_backup and not end_ts then end_ts = end_backup end
+--		mp.msg.error("=====")
+--		mp.msg.error(sound_ts == start_ts and "true" or ((sound_ts or "") .. " vs " .. (start_ts or "")))
+--		mp.msg.error(sound_ts2 == end_ts and "true" or ((sound_ts2 or "") .. " vs " .. (end_ts or "")))
+--		mp.msg.error("=====")
+		
+		if (cmt == nil) then goto continue end
+		cmt = cmt:gsub("\r", "")
+		
+		local name, ep, screenshot_ts = parse_cmt(cmt)
+		
+		extracted_info[id] = {name, ep, start_ts, end_ts}
+		::continue::
 	end
-	return file_path
+	return extracted_info
 end
 
--- lame workaround where i use powershell instead to do the curl request (assumes powershell installation)
--- might need to do something else instead in the future
+----------------------------ANKI INTERFACING----------------------------
+-- NOTE(kt): lame workaround where i use powershell instead to do the curl requests (assumes powershell installation)
+-- might need to do something else instead in the future (sometimes, the most permanent solutions are the supposed temporary ones)
 -- output has all the id's separated by \n
-local function parse_powershell_output()
-	-- TODO(kt): do file parsing on 'result.log'
+
+-- TODO(kt): Ensure UTF-8 Encoding
+local function curl_request_note_ids()
+	local handle = io.popen('powershell.exe -File ' .. get_script_dir() .. 'anki_curl.ps1' .. ' > ' .. get_script_dir() .. 'result.log') -- powershell command
+	handle:close()
+	return
+end
+
+-- NOTE(kt): will probably remove, since we probably don't need
+local function get_note_ids()
+	local f = io.open(get_script_dir() .. 'result.log', 'r')
+	if not f then
+		mp.msg.error("result.log does not exist, or at least could not be found")
+		return
+	end
+	
+	local ids = {}
+	for line in f:lines() do
+		table.insert(ids, line)
+	end
+	
+	f:close()
+	return ids
+end
+
+-- TODO(kt): Ensure UTF-8 Encoding
+local function curl_request_note_fields()
+	local f = io.open(get_script_dir() .. 'result.log', 'r')
+	if not f then
+		mp.msg.error("result.log does not exist, or at least could not be found")
+		return
+	end
+	f:close()
+	
+	local handle = io.popen('powershell.exe -File ' .. get_script_dir() .. 'test.ps1' .. ' > ' .. get_script_dir() .. 'important_thing.log') -- powershell command
+	handle:close()
+	return
+end
+
+local function get_card_details()
+local cds = io.open(get_script_dir() .. 'important_thing.log', 'r')
+	if not cds then
+		mp.msg.error("important_thing.log does not exist, or at least could not be found")
+		return
+	end
+	
+	-- somehow assert the lines are the same first
+	local card_details = {}
+	local count = 1
+	for line in cds:lines() do
+		table.insert(card_details, {})
+		for token in string.gmatch(line, "[^|]+") do
+			table.insert(card_details[count], token)
+		end
+		count = count + 1
+	end
+	
+	cds:close()
+	return card_details
 end
 
 local function ankiconnect_curl_request()
-	local handle = io.popen('powershell.exe -File ' .. get_script_dir() .. 'anki_curl.ps1' .. ' > ' .. get_script_dir() .. 'result.log')
-	local thing = handle:read("*a") -- will probably remove
-	return thing
+--	curl_request_note_ids()
+--	curl_request_note_fields()
+
+--	local note_ids = get_note_ids() -- will probably remove, since we probably don't need
+	local card_details = get_card_details()
+	
+	return card_details
 end
 
 ----------------------------EVENT LISTENING----------------------------
@@ -165,7 +273,11 @@ mp.add_key_binding("Ctrl+f", "testing", function()
 	mp.msg.error(get_file_info())
 --	load_opts()
 --	create_directory(test_path, get_file_info())
-	mp.msg.error(generate_unique_temp())
-	mp.msg.error(type(ankiconnect_curl_request()))
+--	mp.msg.error(generate_unique_temp())
+--	mp.msg.error(ankiconnect_curl_request())
+	local test_val = ankiconnect_curl_request()
+--	mp.msg.error(parse_cmt(test_str))
+	test_val = extract_fields_info(test_val)
+	debug_table(test_val)
 end)
 
