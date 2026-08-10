@@ -198,16 +198,16 @@ end
 
 -- TODO(kt): Ensure UTF-8 Encoding
 local function curl_request_note_ids()
-	local handle = io.popen('powershell.exe -File ' .. get_script_dir() .. 'anki_curl.ps1' .. ' > ' .. get_script_dir() .. 'result.log') -- powershell command
+	local handle = io.popen('powershell.exe -File ' .. get_script_dir() .. 'anki_curl_ids.ps1' .. ' > ' .. get_script_dir() .. 'ids.log') -- powershell command
 	handle:close()
 	return
 end
 
 -- NOTE(kt): will probably remove, since we probably don't need
 local function get_note_ids()
-	local f = io.open(get_script_dir() .. 'result.log', 'r')
+	local f = io.open(get_script_dir() .. 'ids.log', 'r')
 	if not f then
-		mp.msg.error("result.log does not exist, or at least could not be found")
+		mp.msg.error("ids.log does not exist, or at least could not be found")
 		return
 	end
 	
@@ -222,22 +222,22 @@ end
 
 -- TODO(kt): Ensure UTF-8 Encoding
 local function curl_request_note_fields()
-	local f = io.open(get_script_dir() .. 'result.log', 'r')
+	local f = io.open(get_script_dir() .. 'ids.log', 'r')
 	if not f then
-		mp.msg.error("result.log does not exist, or at least could not be found")
+		mp.msg.error("ids.log does not exist, or at least could not be found")
 		return
 	end
 	f:close()
 	
-	local handle = io.popen('powershell.exe -File ' .. get_script_dir() .. 'test.ps1' .. ' > ' .. get_script_dir() .. 'important_thing.log') -- powershell command
+	local handle = io.popen('powershell.exe -File ' .. get_script_dir() .. 'anki_curl_fields.ps1' .. ' > ' .. get_script_dir() .. 'fields.log') -- powershell command
 	handle:close()
 	return
 end
 
 local function get_card_details()
-local cds = io.open(get_script_dir() .. 'important_thing.log', 'r')
+local cds = io.open(get_script_dir() .. 'fields.log', 'r')
 	if not cds then
-		mp.msg.error("important_thing.log does not exist, or at least could not be found")
+		mp.msg.error("fields.log does not exist, or at least could not be found")
 		return
 	end
 	
