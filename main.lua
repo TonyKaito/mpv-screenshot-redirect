@@ -5,7 +5,7 @@ local utils = require('mp.utils')
 
 ----------------------------DEALING WITH SETTINGS----------------------------
 local settings = {
-	folder = "test",
+	folder = utils.getcwd(), -- "test",
 	test = "red"
 }
 
@@ -191,6 +191,29 @@ local function extract_fields_info(card_details)
 	return extracted_info
 end
 
+local function fields_to_dir(fields_table)
+	local files = {}
+	for id, fields in pairs(fields_table) do
+		if ((fields[1] == nil) or (fields[3] == nil and fields[4] == nil)) then
+			mp.msg.error("ERROR: Note ID (" .. id .. ") has no notes field to extract title from")
+			goto continue 
+		end
+		local fields_2 = ""
+		
+		if ((fields[2] ~= nil) and (fields[2] ~= "")) then fields_2 = (fields[2] .. '/') end
+		local dir = fields[1] .. "/" .. fields_2 .. id .. "_" ..(fields[3] or "") .. "_" .. (fields[4] or "")
+		files[id] = dir
+		::continue::
+	end
+	return files
+end
+
+local function create_fields_directories(path, files_table)
+	-- TODO(kt): not yet implemented
+	mp.msg.error("not yet implemented: create_fields_directories(path, files_table)")
+	return
+end
+
 ----------------------------ANKI INTERFACING----------------------------
 -- NOTE(kt): lame workaround where i use powershell instead to do the curl requests (assumes powershell installation)
 -- might need to do something else instead in the future (sometimes, the most permanent solutions are the supposed temporary ones)
@@ -207,7 +230,7 @@ end
 local function get_note_ids()
 	local f = io.open(get_script_dir() .. 'ids.log', 'r')
 	if not f then
-		mp.msg.error("ids.log does not exist, or at least could not be found")
+		mp.msg.error("ERROR: ids.log does not exist, or at least could not be found")
 		return
 	end
 	
@@ -224,7 +247,7 @@ end
 local function curl_request_note_fields()
 	local f = io.open(get_script_dir() .. 'ids.log', 'r')
 	if not f then
-		mp.msg.error("ids.log does not exist, or at least could not be found")
+		mp.msg.error("ERROR: ids.log does not exist, or at least could not be found")
 		return
 	end
 	f:close()
@@ -237,7 +260,7 @@ end
 local function get_card_details()
 local cds = io.open(get_script_dir() .. 'fields.log', 'r')
 	if not cds then
-		mp.msg.error("fields.log does not exist, or at least could not be found")
+		mp.msg.error("ERROR: fields.log does not exist, or at least could not be found")
 		return
 	end
 	
@@ -278,6 +301,9 @@ mp.add_key_binding("Ctrl+f", "testing", function()
 	local test_val = ankiconnect_curl_request()
 --	mp.msg.error(parse_cmt(test_str))
 	test_val = extract_fields_info(test_val)
-	debug_table(test_val)
+	local dirs = fields_to_dir(test_val)
+	debug_table(dirs)
+	mp.msg.error(utils.getcwd())
+	create_fields_directories(settings.folder, dirs)
 end)
 
