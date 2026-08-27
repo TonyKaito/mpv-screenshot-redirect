@@ -5,7 +5,7 @@ local utils = require('mp.utils')
 
 ----------------------------DEALING WITH SETTINGS----------------------------
 local settings = {
-	folder = utils.getcwd(), -- "test",
+	folder = utils.getcwd() .. "/test", -- "test",
 	test = "red"
 }
 
@@ -88,11 +88,11 @@ local function remove_special_characters(str)
 end
 
 local function create_directory(path, folder_name)
---	utils.subprocess({
---		args = (utils.getcwd() and {}) or {}
---	})
-	os.execute("mkdir " .. path .. folder_name) -- NOTE(kt): simple work around for now. not sure how cross-platform this is
-	mp.msg.error("smth")
+	-- NOTE(kt): i'm sure there's a better way to do this, might be costly to open the file. simple workaround for now.
+	local command = "powershell.exe New-Item -ItemType \"Directory\" -Path " .. path .. " -Name \"" .. folder_name .."\""
+	io.popen(command)
+	
+	return
 end
 
 local function get_temp_folder()
@@ -107,6 +107,18 @@ local function folder_exists(file_path)
 		return true
 	end
 	return false
+end
+
+local function clean_folder_name(folder_string)
+	local operations = {
+		remove_text_in_parentheses, 
+		remove_text_in_brackets
+	}
+	for _, funct in ipairs(operations) do
+		folder_string = funct(folder_string) or nil
+	end
+	
+	return folder_string
 end
 
 local function debug_table(poggers)
@@ -175,10 +187,6 @@ local function extract_fields_info(card_details)
 		
 		if start_backup and not start_ts then start_ts = start_backup end
 		if end_backup and not end_ts then end_ts = end_backup end
---		mp.msg.error("=====")
---		mp.msg.error(sound_ts == start_ts and "true" or ((sound_ts or "") .. " vs " .. (start_ts or "")))
---		mp.msg.error(sound_ts2 == end_ts and "true" or ((sound_ts2 or "") .. " vs " .. (end_ts or "")))
---		mp.msg.error("=====")
 		
 		if (cmt == nil) then goto continue end
 		cmt = cmt:gsub("\r", "")
@@ -202,7 +210,7 @@ local function fields_to_dir(fields_table)
 		
 		if ((fields[2] ~= nil) and (fields[2] ~= "")) then fields_2 = (fields[2] .. '/') end
 		local dir = fields[1] .. "/" .. fields_2 .. id .. "_" ..(fields[3] or "") .. "_" .. (fields[4] or "")
-		files[id] = dir
+		files[id] = clean_folder_name(dir)
 		::continue::
 	end
 	return files
@@ -210,7 +218,19 @@ end
 
 local function create_fields_directories(path, files_table)
 	-- TODO(kt): not yet implemented
-	mp.msg.error("not yet implemented: create_fields_directories(path, files_table)")
+	mp.msg.error(path)
+	local count = 0
+	for id, dir in pairs(files_table) do
+		local full_path = path .. "/" .. dir
+		if (not folder_exists(full_path)) then
+			mp.msg.error("Created file at " .. (full_path))
+			create_directory(path, dir)
+			count = count + 1
+		else
+			mp.msg.error("Ignoring: File already exists: " .. full_path)
+		end
+	end
+	mp.osd_message("Created " .. count .. " directories at: " .. path)
 	return
 end
 
@@ -295,15 +315,9 @@ mp.add_key_binding("Ctrl+f", "testing", function()
 	mp.msg.error(conf_path())
 	mp.msg.error(get_file_info())
 --	load_opts()
---	create_directory(test_path, get_file_info())
---	mp.msg.error(generate_unique_temp())
---	mp.msg.error(ankiconnect_curl_request())
 	local test_val = ankiconnect_curl_request()
---	mp.msg.error(parse_cmt(test_str))
 	test_val = extract_fields_info(test_val)
 	local dirs = fields_to_dir(test_val)
-	debug_table(dirs)
-	mp.msg.error(utils.getcwd())
 	create_fields_directories(settings.folder, dirs)
 end)
 
