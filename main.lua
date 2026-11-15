@@ -6,6 +6,7 @@ local utils = require('mp.utils')
 ----------------------------DEALING WITH SETTINGS----------------------------
 local settings = {
 	folder = utils.getcwd() .. "/test", -- "test",
+	screenshot_def = utils.getcwd() .. "/screenshots",
 	test = "red"
 }
 
@@ -321,3 +322,14 @@ mp.add_key_binding("Ctrl+f", "testing", function()
 	create_fields_directories(settings.folder, dirs)
 end)
 
+mp.add_key_binding("s", "testing2", function()
+	-- TODO(kt): maybe change later to do the folder redirects, for now just have a default_dir
+	local def_dir = settings.screenshot_def
+	local template = "%P_%n"
+
+	mp.set_property("screenshot-dir", def_dir)
+	mp.set_property("options/screenshot-template", template)
+	-- local template = mp.get_property("options/screenshot-template", "mpv-shot%n") -- Original Template
+	mp.commandv("screenshot")
+	mp.osd_message("Screenshot Taken")
+end)
