@@ -5,8 +5,7 @@ local utils = require('mp.utils')
 
 ----------------------------DEALING WITH SETTINGS----------------------------
 local settings = {
-	folder = utils.getcwd() .. "/test", -- "test",
-	screenshot_def = utils.getcwd() .. "/screenshots",
+	folder = utils.getcwd() .. "/screenshots", -- "test",
 	test = "red"
 }
 
@@ -139,7 +138,7 @@ local function parse_cmt(str)
 	if str == nil then
 		return ""
 	end
-	return str:match("(.-)%s*EP(%d*)%s*%((%w*)%)")
+	return str:match("(.-)%s*EP(%d*)%s*%((%w*)%) <br>%s*(.+)")
 end
 
 local function parse_sound(str)
@@ -192,7 +191,13 @@ local function extract_fields_info(card_details)
 		if (cmt == nil) then goto continue end
 		cmt = cmt:gsub("\r", "")
 		
-		local name, ep, screenshot_ts = parse_cmt(cmt)
+		local name, ep, screenshot_ts, path = parse_cmt(cmt)
+		mp.msg.error(">>>>>>>> cwd_thing: " .. utils.getcwd())
+		mp.msg.error(">>>>>>>> path_thing: " .. path)
+		if not (path:find(utils.getcwd(), 1, true)) then
+			mp.msg.error(">>>>>>>>>>>>>>>>>>>> not in path <<<<<<<<<<<<<")
+			goto continue 
+		end
 		
 		extracted_info[id] = {name, ep, start_ts, end_ts}
 		::continue::
@@ -273,7 +278,7 @@ local function curl_request_note_fields()
 	end
 	f:close()
 	
-	local handle = io.popen('powershell.exe -File ' .. get_script_dir() .. 'anki_curl_fields.ps1' .. ' > ' .. get_script_dir() .. 'fields.log') -- powershell command
+	local handle = io.popen('powershell.exe -File ' .. get_script_dir() .. 'anki_curl_fields.ps1' .. ' -Path ' .. get_script_dir() .. 'ids.log' .. ' > ' .. get_script_dir() .. 'fields.log') -- powershell command
 	handle:close()
 	return
 end
@@ -301,8 +306,8 @@ local cds = io.open(get_script_dir() .. 'fields.log', 'r')
 end
 
 local function ankiconnect_curl_request()
---	curl_request_note_ids()
---	curl_request_note_fields()
+	curl_request_note_ids()
+	curl_request_note_fields()
 
 --	local note_ids = get_note_ids() -- will probably remove, since we probably don't need
 	local card_details = get_card_details()
@@ -324,7 +329,7 @@ end)
 
 mp.add_key_binding("s", "testing2", function()
 	-- TODO(kt): maybe change later to do the folder redirects, for now just have a default_dir
-	local def_dir = settings.screenshot_def
+	local def_dir = settings.folder
 	local template = "%P_%n"
 
 	mp.set_property("screenshot-dir", def_dir)

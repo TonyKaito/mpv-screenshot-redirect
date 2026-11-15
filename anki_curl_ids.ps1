@@ -6,7 +6,8 @@ $request = @{
 		"action" = "findNotes"
 		"version" = 6
 		"params" = @{
-			"query" = "tag:subs2srs" # assuming integration with subs2srs
+			"query" = "tag:path_in_note" # custom tag
+			# "query" = "tag:subs2srs" # assuming integration with subs2srs
 		}
 	} | ConvertTo-Json
 }

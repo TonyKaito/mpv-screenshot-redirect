@@ -1,4 +1,8 @@
-$file = Get-Content -Path .\result.log | ForEach-Object { [Int64]$_ } # takes AnkiConnect only takes int64 for some reason
+Param(
+	[String]$Path
+)
+
+$file = Get-Content -Path $Path | ForEach-Object { [Int64]$_ } # takes AnkiConnect only takes int64 for some reason
 
 $request = @{
 	Method = "POST"
