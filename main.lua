@@ -5,13 +5,8 @@ local utils = require('mp.utils')
 
 ----------------------------DEALING WITH SETTINGS----------------------------
 local settings = {
-	folder = utils.getcwd() .. "/screenshots", -- "test",
-	test = "red"
+	folder = utils.getcwd() .. "/screenshots"
 }
-
--- to remove later
-local test_str = "Gochuumon_wa_Usagi_Desu_ka_S01 EP08 (08m14s597ms)"
-local test_filename = "【VCC二次会】一度も伝わることのないお絵描き伝言ゲームｗｗｗ【切り抜き だるまいずごっど 葛葉 じゃすぱー わいわい 井口理 ⧸Gartic Phone】 [H15-PkzDOJ8].mp4"
 
 local conf_name = "screenshot.conf"
 
@@ -215,7 +210,8 @@ local function fields_to_dir(fields_table)
 		local fields_2 = ""
 		
 		if ((fields[2] ~= nil) and (fields[2] ~= "")) then fields_2 = (fields[2] .. '/') end
-		local dir = fields[1] .. "/" .. fields_2 .. id .. "_" ..(fields[3] or "") .. "_" .. (fields[4] or "")
+		local dir = fields_2 .. id .. "_" ..(fields[3] or "") .. "_" .. (fields[4] or "")
+		-- local dir = fields[1] .. "/" .. fields_2 .. id .. "_" ..(fields[3] or "") .. "_" .. (fields[4] or "")
 		files[id] = clean_folder_name(dir)
 		::continue::
 	end
@@ -238,6 +234,32 @@ local function create_fields_directories(path, files_table)
 	end
 	mp.osd_message("Created " .. count .. " directories at: " .. path)
 	return
+end
+
+local function to_ms(minutes, seconds, milliseconds)
+	return minutes * 60000 + seconds * 1000 + milliseconds
+end
+
+local function set_dir_to_card(timestamp, filename)
+	local dir = settings.folder
+	local return_dir = dir
+	
+	local dirs = utils.readdir(dir, "dirs") or {}
+	
+	for _, name in ipairs(dirs) do
+		mp.msg.error(name)
+		
+		local s_m, s_s, s_ms, e_m, e_s, e_ms = name:match("%d*_(%d*)m(%d*)s(%d*)ms_(%d*)m(%d*)s(%d*)ms")
+		local s_timestamp = to_ms(tonumber(s_m), tonumber(s_s), tonumber(s_ms))
+		local e_timestamp = to_ms(tonumber(e_m), tonumber(e_s), tonumber(e_ms))
+		
+		if (timestamp >= s_timestamp) and (timestamp <= e_timestamp) then
+			return_dir = dir .. '/' .. name
+			break
+		end
+	end
+	
+	return return_dir
 end
 
 ----------------------------ANKI INTERFACING----------------------------
@@ -328,13 +350,15 @@ mp.add_key_binding("Ctrl+f", "testing", function()
 end)
 
 mp.add_key_binding("s", "testing2", function()
-	-- TODO(kt): maybe change later to do the folder redirects, for now just have a default_dir
-	local def_dir = settings.folder
 	local template = "%P_%n"
 
-	mp.set_property("screenshot-dir", def_dir)
+	local timestamp = mp.get_property("time-pos/full") * 1000 -- default in seconds
+	local dir = set_dir_to_card(timestamp)
+
+	mp.set_property("screenshot-dir", dir)
 	mp.set_property("options/screenshot-template", template)
 	-- local template = mp.get_property("options/screenshot-template", "mpv-shot%n") -- Original Template
-	mp.commandv("screenshot")
-	mp.osd_message("Screenshot Taken")
+	local result = mp.command_native({"screenshot"})
+	
+	mp.osd_message("Screenshot in File: " .. result.filename)
 end)
